@@ -1,162 +1,116 @@
+// in index.html, add a script tag <script src="https://npmcdn.com/parse/dist/parse.js">
+
 Parse.initialize("myAppId");
 Parse.serverURL = 'https://parse-server-flight846.herokuapp.com/parse';
 
-var TEAMS_JSON_URL = "https://gist.githubusercontent.com/jawache/0be7f073eb27762d97cac34972ea3468/raw/e8b4f92e7ca677da38700e43e506971d9d592a2a/premier_teams.json";
+var Order = Parse.Object.extend("Order");
+var order = new Order();
 
-var PLAYERS_JSON_URL = "https://gist.githubusercontent.com/jawache/e281399ba5d63dc10bd170dd2b0f707f/raw/9821e89146b13dc42abcf8fb7e69939c55ee5886/premier_football_players.json";
+order.set("order_id", "OI_1234");
+order.set("amount", 112.3);
+order.set("date", new Date('2016-02-01'));
+order.save(null, {
+	success: function success(obj) {
+	  console.log("Order created with id " + obj.id);
 
-var COFFEE_JSON_URL = "https://gist.githubusercontent.com/jawache/2a11d6fb31e79dcf827e2d42d1326e4b/raw/403a967604107e9b9f24df23ce6ba5cb6c7fc5d0/coffee_shops_east_london.json";
-
-var Team = Parse.Object.extend("Team");
-var Player = Parse.Object.extend("Player");
-var Place = Parse.Object.extend("Place");
-
-var TEAMS_MAP = {};
-
-function deletePlaces() {
-  var promise = new Parse.Promise();
-	var q = new Parse.Query("Place");
-	q.limit(1000);
-  q.find().then(function(places) {
-    Parse.Object.destroyAll(places).then(function() {
-			console.log("Places deleted... ");
-			promise.resolve();
-		});
-	});
-	return promise;
-}
-
-function deleteTeams() {
-  var promise = new Parse.Promise();
-	var q = new Parse.Query("Team");
-	q.limit(1000);
-  q.find().then(function(teams) {
-    Parse.Object.destroyAll(teams).then(function() {
-			console.log("Teams deleted... ");
-			promise.resolve();
-		});
-	});
-	return promise;
-}
-
-
-function deletePlayers() {
-  var promise = new Parse.Promise();
-	var q = new Parse.Query("Player");
-	q.limit(1000);
-  q.find().then(function(players) {
-    Parse.Object.destroyAll(players).then(function() {
-			console.log("Players deleted... ");
-			promise.resolve();
-		});
-	});
-	return promise;
-}
-
-function createTeams() {
-  var promise = new Parse.Promise();
-	console.log("Creating teams...");
-	var promises = [];
-	$.getJSON( TEAMS_JSON_URL, function( data ) {
-    for (var i = 0; i < data.length; i++) {
-			var item = data[i];
-			console.log("Saving team " + item.name);
-			if (item.squadMarketValue) {
-  			item.squadMarketValue = parseFloat(item.squadMarketValue.slice(0, -1).replace(',',''));
-			}
-			var team = new Team();
-			promises.push(team.save(item));
-			TEAMS_MAP[item.code] = team;
-		};
-
-
-		Parse.Promise.when(promises).then(function() {
-			console.log("All teams created");
-			promise.resolve();
-		}, function error(err) {
-			console.error(err);
-		});
-	});
-
-
-	return promise;
-}
-
-
-function createPlayers() {
-  var promise = new Parse.Promise();
-	console.log("Creating players...");
-	var promises = [];
-	$.getJSON( PLAYERS_JSON_URL, function( data ) {
-		console.log("Got data ", data);
-		//noprotect
-		for (var i = 0; i < data.length; i++) {
-			var item = data[i];
-			console.log("Saving player " + item.name);
-			if (item.marketValue) {
-  			item.marketValue = parseFloat(item.marketValue.slice(0, -1).replace(',',''));
-			}
-			if (item.dateOfBirth) {
-				item.dateOfBirth = new Date(item.dateOfBirth);
-			}
-			if (item.contractUntil) {
-				item.contractUnitl = new Date(item.contractUntil);
-			}
-			if (item.teamCode) {
-				item.team = TEAMS_MAP[item.teamCode];
-			}
-			var player = new Player();
-			promises.push(player.save(item));
+		var Item = Parse.Object.extend("Item");
+		var items = [
+			{"item_id": 1, "name": "hat", "cost": 12.3, "order": order},
+			{"item_id": 2, "name": "shoes", "cost": 50, "order": order},
+			{"item_id": 3, "name": "gloves", "cost": 50, "order": order},
+		];
+		for (var i = 0; i < items.length; i++) {
+      var item = new Item();
+			item.save(items[i], {
+				success: function success(obj) {
+      	  console.log("Item created with id " + obj.id);
+				}
+			});
 		}
+	},
+	error: function (obj, err) {
+		console.log(err);
+	}
+});
 
-		Parse.Promise.when(promises).then(function() {
-			console.log("All players created");
-			promise.resolve();
-		}, function error(err) {
-			console.error(err);
-		});
+// create an empty row
+var Post = Parse.Object.extend("Post");
 
-	});
-	return promise;
+// create a new class with new key/value pair columns
+var post = new Post();
+// post.set("body", "Hello, my name is Yazid");
+// post.set("tags", ["first-post", "welcome"]);
+// post.set("numComments", 0);
+
+var data = {
+	"body": "Hello, my name is Yazid",
+	"tags": ["second-post", "welcome"],
+	"numComments": 0,
+	"author": "Yazid Ismail"
 }
+// save into data instance into post object database
+post.save(data, {
+	success: function (obj) {
+		console.log("Successful saved: " + obj.id); // "Successful saved: undefined"
 
-
-function createPlaces() {
-  var promise = new Parse.Promise();
-	console.log("Creating places...");
-	var promises = [];
-	$.getJSON( COFFEE_JSON_URL, function( data ) {
-		for (var i = 0; i < data.length; i++) {
-      var item = data[i];
-			console.log("Saving place " + item.name);
-			delete item['id'];
-			delete item['distance'];
-			if (item.location) {
-
-        var lat = item.location.coordinate.latitude;
-        var lon = item.location.coordinate.longitude;
-				var point = new Parse.GeoPoint({latitude: lat, longitude: lon});
-				item.geo = point;
+		// One-to-One relationship
+		var Comment = Parse.Object.extend("Comment");
+		var comment = new Comment();
+		comment.set("message", "This is a new comment for the post");
+		//
+		comment.set("parent", post);
+		comment.save(null, {
+			success: function (obj) {
+				console.log("Saved comment " + obj.id);
+				// one to many
+				var comments = post.relation("comments")
+				comments.add(comment);
+				post.save();
+			},
+			error: function (obj, err) {
+				console.log(err);
 			}
-			var place = new Place();
-			promises.push(place.save(item));
-		}
-
-		Parse.Promise.when(promises).then(function() {
-			console.log("All places created");
-			promise.resolve();
-		}, function error(err) {
-			console.error(err);
 		});
 
-	});
-	return promise;
-}
+		// get object
+		var q = new Parse.Query("Post");
+		q.get(post.id, {
+			success: function (obj) {
+				console.log("Successful got: " + obj.id);
+				// after get, we update the object
+				obj.set("body", "This is the updated message");
+				obj.increment("numComments");
+				obj.add("tags", "updated-post");
 
+				obj.save(null, {
+					success: function (obj) {
+						console.log("Successfully edited: " + obj.id);
 
-deleteTeams()
-	.then(createTeams)
-	.then(deletePlayers)
-	.then(createPlayers)
-  .then(deletePlaces)
-	.then(createPlaces);
+						// delete column
+						obj.unset("numComments");
+						obj.save();
+
+						// delete a row
+						// obj.destroy({
+						// 	success: function (obj) {
+						// 		console.log("Successfully destroyed: " + obj.id);
+						// 	},
+						// 	error: function (obj, error) {
+						// 		console.log(err);
+						// 	}
+						// });
+					},
+					error: function (obj, err) {
+						console.log(err);
+					}
+				});
+			},
+			error: function (obj, err) {
+				console.log(err);
+			}
+		});
+	},
+	error: function (obj, err) {
+		console.log(err)
+	}
+});
